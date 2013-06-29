@@ -20,19 +20,40 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #define MESSAGE_HEX_COLOR 0x0f5297
 #define SUCCESS_HEX_COLOR 0x00ff00
 #define NOTIFICATION_VIEW_OPACITY 0.85f
+#define IS_ARC              (__has_feature(objc_arc))
 
 @implementation SJNotificationViewController
 
-@synthesize parentView, notificationPosition, notificationDuration, backgroundColor;
-
-- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+- (id)initWithParentView:(UIView*)pView
 {
-    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
-    if (self) {
-        // Custom initialization
-		showSpinner = NO;
+    self = [super init];
+        
+    if (self)
+    {
+        [self setParentView:pView];
 		[self setNotificationLevel:SJNotificationLevelMessage];
+        showSpinner = NO;
+        
+        UIView * theView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 320.0f, 44.0f)];
+        _spinner = [[UIActivityIndicatorView alloc] initWithFrame:CGRectMake(288.0f, 22.0f, 30.0f, 30.0f)];
+        [theView addSubview:_spinner];
+
+        _label = [[UILabel alloc] initWithFrame:CGRectMake(12.0f, 11.0f, 288.0f, 21.0f)];
+        [_label setBackgroundColor:[UIColor clearColor]];
+        [_label setTextColor:[UIColor whiteColor]];
+        [_label setMinimumFontSize:9];
+        [_label setNumberOfLines:1];
+        [_label setAdjustsFontSizeToFitWidth:YES];
+        [_label setTextAlignment:NSTextAlignmentCenter];
+        [theView addSubview:_label];
+
+        self.view = theView;
+        
+        #if !IS_ARC
+        [theView release];
+        #endif
     }
+    
     return self;
 }
 
@@ -46,30 +67,34 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 #pragma mark - Showing/Hiding the Notification
 
-- (void)show {
-	NSLog(@"showing notification view");
+- (void)show
+{
+    #if TESTING
+    NSLog(@"showing notification view");
+    #endif
+
 	
     /* Override level's background color if background color is set manually */
-    if (backgroundColor) {
-        [self.view setBackgroundColor:backgroundColor];
+    if (_backgroundColor) {
+        [self.view setBackgroundColor:_backgroundColor];
     }
     
 	/* Attach to the bottom of the parent view. */
 	CGFloat yPosition;
     
-    switch (notificationPosition) {
+    switch (_notificationPosition) {
         case SJNotificationPositionTop:
             yPosition = self.view.frame.size.height * -1;
             break;
             
         default:
-            yPosition = [parentView frame].size.height;
+            yPosition = [_parentView frame].size.height;
 
             break;
     }
 	
 	[self.view setFrame:CGRectMake(0, yPosition, self.view.frame.size.width, self.view.frame.size.height)];
-	[parentView addSubview:self.view];
+	[_parentView addSubview:self.view];
 	
 	[UIView animateWithDuration:SLIDE_DURATION
 					 animations:^{
@@ -82,13 +107,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 					 }
 	 ];
     
-    if (notificationDuration != SJNotificationDurationStay) {
-        [self performSelector:@selector(hide) withObject:nil afterDelay:((CGFloat)notificationDuration / 1000.0f)];
+    if (_notificationDuration != SJNotificationDurationStay) {
+        [self performSelector:@selector(hide) withObject:nil afterDelay:((CGFloat)_notificationDuration / 1000.0f)];
     }
 }
 
-- (void)hide {
-	NSLog(@"hiding notification view");
+- (void)hide
+{
+    #if TESTING
+    NSLog(@"hiding notification view");
+    #endif
+	
 	[UIView animateWithDuration:SLIDE_DURATION
 					 animations:^{
 						 /* Slide the notification view down. */
@@ -106,26 +135,26 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     
     // when hidden
     if (hidden) {
-        switch (notificationPosition) {
+        switch (_notificationPosition) {
             case SJNotificationPositionTop:
                 y = self.view.frame.size.height * -1;
                 break;
                 
             case SJNotificationPositionBottom:
             default:
-                y = [parentView frame].size.height;
+                y = [_parentView frame].size.height;
                 break;
         }
     // when shown
     } else {
-        switch (notificationPosition) {
+        switch (_notificationPosition) {
             case SJNotificationPositionTop:
                 y = 0;
                 break;
                 
             case SJNotificationPositionBottom:
             default:
-                y = [parentView frame].size.height - self.view.frame.size.height;
+                y = [_parentView frame].size.height - self.view.frame.size.height;
                 break;
         }
     }
@@ -137,7 +166,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 - (void)setNotificationTitle:(NSString *)t {
 	notificationTitle = t;
-	[label setText:t];
+	[_label setText:t];
 }
 
 #pragma mark - Setting Tap Action
@@ -149,7 +178,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 	
 	UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:target action:selector];
 	[self.view addGestureRecognizer:tap];
+    #if !IS_ARC
 	[tap release];
+    #endif
 }
 
 #pragma mark - Setting Notification Level
@@ -188,58 +219,51 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 #pragma mark - Spinner
 
-- (void)setShowSpinner:(BOOL)b {
+- (void)setShowSpinner:(BOOL)b
+{
 	showSpinner = b;
 	if (showSpinner) {
-		NSLog(@"spinner showing");
-		[spinner.layer setOpacity:1.0];
+        #if TESTING
+        NSLog(@"spinner showing");
+        #endif
+		
+		[_spinner.layer setOpacity:1.0];
 		[UIView animateWithDuration:LABEL_RESIZE_DURATION
 						 animations:^{
-							 [label setFrame:CGRectMake(44, label.frame.origin.y, 258, label.frame.size.height)];
+							 [_label setFrame:CGRectMake(44, _label.frame.origin.y, 258, _label.frame.size.height)];
 						 }
 						 completion:^(BOOL finished) {
-							 [spinner startAnimating];
+							 [_spinner startAnimating];
 						 }
 		];
 	} else {
-		NSLog(@"spinner not showing");
-		[spinner stopAnimating];
-		[spinner.layer setOpacity:0.0];
+        #if TESTING
+        NSLog(@"spinner not showing");
+        #endif
+		
+		
+		[_spinner stopAnimating];
+		[_spinner.layer setOpacity:0.0];
 		[UIView animateWithDuration:LABEL_RESIZE_DURATION
 						 animations:^{
-							 [label setFrame:CGRectMake(12, label.frame.origin.y, 290, label.frame.size.height)];
+							 [_label setFrame:CGRectMake(12, _label.frame.origin.y, 290, _label.frame.size.height)];
 						 }
 		 ];
 	}
 }
 
-#pragma mark - Text Color
-
-- (void)setTextColor:(UIColor *)theTextColor {
-    label.textColor = theTextColor;
-}
-
-- (UIColor*)textColor {
-    return label.textColor;
-}
 
 #pragma mark - View lifecycle
 
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    // Do any additional setup after loading the view from its nib.
 	
 	/* By default, tapping the notification view hides it. */
 	[self setTapTarget:self selector:@selector(hide)];
+    [self setShowSpinner:showSpinner];
 	
-	if (showSpinner) {
-		[self setShowSpinner:YES];
-	} else {
-		[self setShowSpinner:NO];
-	}
-	
-	[label setText:notificationTitle];
+	[_label setText:notificationTitle];
 }
 
 - (void)viewDidUnload
@@ -253,6 +277,15 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 {
     // Return YES for supported orientations
     return (interfaceOrientation == UIInterfaceOrientationPortrait);
+}
+
+-(void)dealloc
+{
+    #if !IS_ARC
+    [_spinner release]; self.spinner = nil;
+    [_label release]; self.label = nil;
+    [super dealloc];
+    #endif
 }
 
 @end

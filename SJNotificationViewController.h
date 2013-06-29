@@ -32,22 +32,19 @@ typedef enum {
 
 @interface SJNotificationViewController : UIViewController {
 	SJNotificationLevel notificationLevel;
-    SJNotificationPosition notificationPosition;
-    SJNotificationDuration notificationDuration;
-	UIView *parentView;
-	IBOutlet UILabel *label;
-	IBOutlet UIActivityIndicatorView *spinner;
-	BOOL showSpinner;
 	NSString *notificationTitle;
-    UIColor *backgroundColor;
-    UIColor *textColor;
+    
+	BOOL showSpinner;
 }
 
+@property (readwrite, strong) UILabel *label;
+@property (readwrite, strong) UIActivityIndicatorView *spinner;
 @property (readwrite, assign) UIView *parentView;
 @property (nonatomic) SJNotificationPosition notificationPosition;
 @property (nonatomic) SJNotificationDuration notificationDuration;
-@property (nonatomic, retain) UIColor *backgroundColor;
-@property (nonatomic, retain) UIColor *textColor;
+@property (nonatomic, strong) UIColor *backgroundColor;
+
+- (id)initWithParentView:(UIView*)pView;
 
 - (void)setShowSpinner:(BOOL)b;
 - (void)setNotificationLevel:(SJNotificationLevel)level;
